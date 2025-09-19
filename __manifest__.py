@@ -18,9 +18,13 @@ Módulo customizado para implementar hierarquia de unidades de vendas
         'crm',
         'base',
     ],
-    'data': [],
+        'data': [
+        'security/sales_unit_groups.xml',   # cria os grupos primeiro
+        'security/ir.model.access.csv',     # depois aplica regras de acesso
+        'views/crm_sales_unit_views.xml',   # só então views/menus
+    ],
+    'demo': [],
     'installable': True,
     'application': True,
     'auto_install': False,
 }
-

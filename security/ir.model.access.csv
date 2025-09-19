@@ -1,0 +1,6 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_sales_unit_user,access_sales_unit_user,model_crm_sales_unit,base.group_user,1,0,0,0
+access_sales_unit_coordinator,access_sales_unit_coordinator,model_crm_sales_unit,crm_sales_unit.group_coordinator,1,1,0,0
+access_sales_unit_manager,access_sales_unit_manager,model_crm_sales_unit,crm_sales_unit.group_manager,1,1,1,1
+access_sales_unit_director,access_sales_unit_director,model_crm_sales_unit,crm_sales_unit.group_director,1,1,1,1
+access_sales_unit_president,access_sales_unit_president,model_crm_sales_unit,crm_sales_unit.group_president,1,1,1,1
