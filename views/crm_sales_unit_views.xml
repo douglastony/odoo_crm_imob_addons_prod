@@ -26,6 +26,7 @@
                     <group>
                         <field name="type"/>
                         <field name="name"/>
+                        <field name="responsible_id"/>
                     </group>
 
                     <notebook>
