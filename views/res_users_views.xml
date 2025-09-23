@@ -1,30 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
     <record id="view_users_form_inherit_sales_unit" model="ir.ui.view">
-        <field name="name">res.users.form.inherit.sales.unit.groups</field>
+        <field name="name">res.users.form.inherit.sales.unit</field>
         <field name="model">res.users</field>
-        <field name="inherit_id" ref="base.user_groups_view"/>
+        <field name="inherit_id" ref="base.view_users_form"/>
         <field name="arch" type="xml">
 
-            <!-- Adiciona os grupos customizados -->
-            <xpath expr="//separator" position="before">
-                <separator string="CRM Sales Unit"/>
-                <group>
-                    <field name="in_group_36"/> <!-- Coordenador -->
-                    <field name="in_group_37"/> <!-- Gerente -->
-                </group>
-                <group>
-                    <field name="in_group_38"/> <!-- Diretor -->
-                    <field name="in_group_39"/> <!-- Sócio -->
-                </group>
-            </xpath>
-
-            <!-- Adiciona campo Unidade de Vendas -->
-            <xpath expr="//field[@name='groups_id']" position="after">
-                <group>
+            <!-- Insere logo após o campo login -->
+            <xpath expr="//field[@name='login']" position="after">
+                <group string="CRM Sales Unit">
                     <field name="sales_unit_id"
-                           domain="[('id', 'child_of', user.sales_unit_id.id)]"
-                           context="{'default_parent_id': user.sales_unit_id.id}"/>
+                           domain="[('id', 'child_of', uid)]"
+                           context="{}"/>
                 </group>
             </xpath>
 

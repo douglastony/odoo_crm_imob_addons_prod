@@ -6,7 +6,6 @@
         <field name="name">CRM Sales Unit</field>
         <field name="sequence">20</field>
         <field name="visible" eval="1"/>
-        <field name="is_application" eval="1"/>
     </record>
 
     <!-- Grupos vinculados à categoria -->

@@ -1,6 +1,9 @@
 # crm_sales_unit/models/res_users.py
+import logging
 from odoo import models, fields, api
 from odoo.exceptions import UserError
+
+_logger = logging.getLogger(__name__)
 
 
 class ResUsers(models.Model):
@@ -11,40 +14,69 @@ class ResUsers(models.Model):
         string="Unidade de Vendas"
     )
 
-    @api.model
-    def create(self, vals):
-        creator = self.env.user  # quem está criando o usuário
-        sales_unit = creator.sales_unit_id
+    @api.model_create_multi
+    def create(self, vals_list):
+        users = self.env['res.users']
+        creator = self.env.user  # quem está criando
+        creator_unit = creator.sales_unit_id
 
-        if not creator.has_group("crm_sales_unit.group_coordinator") \
-           and not creator.has_group("crm_sales_unit.group_manager") \
-           and not creator.has_group("crm_sales_unit.group_director") \
-           and not creator.has_group("crm_sales_unit.group_president"):
-            raise UserError("Você não tem permissão para criar usuários.")
+        for vals in vals_list:
+            target_unit_id = vals.get("sales_unit_id")
 
-        # Se criador tem unidade de vendas, herda a estrutura
-        if sales_unit:
+            # Verificação inicial: só líderes podem criar
+            if not (
+                creator.has_group("crm_sales_unit.group_coordinator")
+                or creator.has_group("crm_sales_unit.group_manager")
+                or creator.has_group("crm_sales_unit.group_director")
+                or creator.has_group("crm_sales_unit.group_president")
+            ):
+                raise UserError("Você não tem permissão para criar usuários.")
+
+            # Se criador não for Sócio e não tiver unidade → bloqueia
+            if not creator_unit and not creator.has_group("crm_sales_unit.group_president"):
+                raise UserError("Você precisa estar vinculado a uma Unidade de Vendas para criar usuários.")
+
+            # ========================
+            # COORDENADOR
+            # ========================
             if creator.has_group("crm_sales_unit.group_coordinator"):
-                # Coordenador só pode criar na própria coordenação
-                vals["sales_unit_id"] = sales_unit.id
+                vals["sales_unit_id"] = creator_unit.id
 
+            # ========================
+            # GERENTE
+            # ========================
             elif creator.has_group("crm_sales_unit.group_manager"):
-                # Gerente pode criar na gerência ou coordenações abaixo
-                if not vals.get("sales_unit_id"):
-                    vals["sales_unit_id"] = sales_unit.id
-                else:
-                    unit = self.env["crm.sales.unit"].browse(vals["sales_unit_id"])
-                    if unit.id != sales_unit.id and unit.parent_id.id != sales_unit.id:
-                        raise UserError("Gerente só pode criar usuários em sua gerência ou coordenações abaixo dela.")
+                target_unit = self.env["crm.sales.unit"].browse(target_unit_id) if target_unit_id else creator_unit
+                allowed_units = creator_unit.child_ids.ids + [creator_unit.id]
+                if target_unit.id not in allowed_units:
+                    raise UserError("Gerente só pode criar usuários na sua gerência ou coordenações abaixo dela.")
+                vals["sales_unit_id"] = target_unit.id
 
+            # ========================
+            # DIRETOR
+            # ========================
             elif creator.has_group("crm_sales_unit.group_director"):
-                # Diretor pode criar na diretoria ou subunidades
-                allowed_units = sales_unit.child_ids + sales_unit
-                if vals.get("sales_unit_id") and vals["sales_unit_id"] not in allowed_units.ids:
-                    raise UserError("Diretor só pode criar usuários em sua diretoria ou subunidades.")
+                target_unit = self.env["crm.sales.unit"].browse(target_unit_id) if target_unit_id else creator_unit
+                allowed_units = creator_unit.search([("id", "child_of", creator_unit.id)]).ids
+                if target_unit.id not in allowed_units:
+                    raise UserError("Diretor só pode criar usuários em sua diretoria ou subunidades abaixo dela.")
+                vals["sales_unit_id"] = target_unit.id
 
+            # ========================
+            # PRESIDENTE (SÓCIO)
+            # ========================
             elif creator.has_group("crm_sales_unit.group_president"):
-                # Presidente não tem restrição
-                pass
+                if not target_unit_id and creator_unit:
+                    vals["sales_unit_id"] = creator_unit.id
 
-        return super().create(vals)
+            # Log para auditoria
+            _logger.info(
+                "Usuário [%s] criou um novo usuário [%s] na Unidade de Vendas ID [%s]",
+                creator.login,
+                vals.get("login", "sem_login"),
+                vals.get("sales_unit_id")
+            )
+
+            users |= super(ResUsers, self).create([vals])
+
+        return users
