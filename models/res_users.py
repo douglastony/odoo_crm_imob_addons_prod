@@ -1,7 +1,7 @@
 # crm_sales_unit/models/res_users.py
 import logging
-from odoo import models, fields, api
-from odoo.exceptions import UserError, ValidationError
+from odoo import models, fields, api, _
+from odoo.exceptions import UserError, ValidationError, AccessError
 
 _logger = logging.getLogger(__name__)
 
@@ -84,6 +84,44 @@ class ResUsers(models.Model):
         return users
 
     def write(self, vals):
+        """Restringe movimentação de usuários entre unidades e garante unicidade de cargos"""
+        if "sales_unit_id" in vals:
+            mover = self.env.user
+            mover_unit = mover.sales_unit_id
+            target_unit = self.env["crm.sales.unit"].browse(vals["sales_unit_id"]) if vals["sales_unit_id"] else False
+
+            for user in self:
+                # Coordenador
+                if mover.has_group("crm_sales_unit.group_coordinator"):
+                    raise AccessError(_("Coordenador não pode mover usuários entre unidades."))
+
+                # Gerente
+                elif mover.has_group("crm_sales_unit.group_manager"):
+                    allowed_units = mover_unit.child_ids.ids + [mover_unit.id]
+                    if target_unit and target_unit.id not in allowed_units:
+                        raise AccessError(_("Gerente só pode mover usuários dentro da sua gerência ou coordenações abaixo dela."))
+
+                # Diretor
+                elif mover.has_group("crm_sales_unit.group_director"):
+                    allowed_units = mover_unit.search([("id", "child_of", mover_unit.id)]).ids
+                    if target_unit and target_unit.id not in allowed_units:
+                        raise AccessError(_("Diretor só pode mover usuários dentro da sua diretoria ou descendentes."))
+
+                # Presidente → sem restrição
+                elif mover.has_group("crm_sales_unit.group_president"):
+                    pass
+
+                else:
+                    raise AccessError(_("Você não tem permissão para alterar a unidade de vendas de usuários."))
+
+                _logger.info(
+                    "Usuário [%s] moveu [%s] da Unidade [%s] para [%s]",
+                    mover.login,
+                    user.login,
+                    user.sales_unit_id.id,
+                    target_unit.id if target_unit else "Nenhuma"
+                )
+
         res = super().write(vals)
         self._check_unique_sales_unit_role()
         return res
