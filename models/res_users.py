@@ -1,7 +1,7 @@
-# crm_sales_unit/models/res_users.py
 import logging
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError, ValidationError, AccessError
+from odoo import SUPERUSER_ID
 
 _logger = logging.getLogger(__name__)
 
@@ -11,19 +11,53 @@ class ResUsers(models.Model):
 
     sales_unit_id = fields.Many2one(
         "crm.sales.unit",
-        string="Unidade de Vendas"
+        string="Unidade de Vendas",
+        ondelete="set null"
     )
+
+    allowed_user_ids = fields.Many2many(
+        "res.users",
+        "res_users_allowed_rel",
+        "user_id",
+        "allowed_id",
+        string="Usuários visíveis",
+        compute="_compute_allowed_user_ids",
+        store=True
+    )
+
+    @api.depends(
+        "sales_unit_id",
+        "sales_unit_id.child_ids",
+        "sales_unit_id.parent_id",
+        "sales_unit_id.member_ids",
+        "sales_unit_id.responsible_id"
+    )   
+    def _compute_allowed_user_ids(self):
+        for user in self:
+            allowed = user  # sempre inclui o próprio
+
+            if user.sales_unit_id:
+                # pega todas as unidades abaixo (recursivamente)
+                descendant_units = self.env["crm.sales.unit"].search([
+                    ("id", "child_of", user.sales_unit_id.id)
+                ])
+
+                # inclui membros e responsáveis de todas as unidades
+                allowed |= descendant_units.mapped("member_ids")
+                allowed |= descendant_units.mapped("responsible_id")
+
+            user.allowed_user_ids = allowed
 
     @api.model_create_multi
     def create(self, vals_list):
         users = self.env['res.users']
-        creator = self.env.user  # quem está criando
+        creator = self.env.user
         creator_unit = creator.sales_unit_id
 
         for vals in vals_list:
             target_unit_id = vals.get("sales_unit_id")
 
-            # Verificação inicial: só líderes podem criar
+            # 🔒 Permissões: só líderes criam
             if not (
                 creator.has_group("crm_sales_unit.group_coordinator")
                 or creator.has_group("crm_sales_unit.group_manager")
@@ -32,19 +66,15 @@ class ResUsers(models.Model):
             ):
                 raise UserError("Você não tem permissão para criar usuários.")
 
-            # Se criador não for Sócio e não tiver unidade → bloqueia
             if not creator_unit and not creator.has_group("crm_sales_unit.group_president"):
                 raise UserError("Você precisa estar vinculado a uma Unidade de Vendas para criar usuários.")
 
             # ========================
-            # COORDENADOR
+            # Regras hierárquicas
             # ========================
             if creator.has_group("crm_sales_unit.group_coordinator"):
                 vals["sales_unit_id"] = creator_unit.id
 
-            # ========================
-            # GERENTE
-            # ========================
             elif creator.has_group("crm_sales_unit.group_manager"):
                 target_unit = self.env["crm.sales.unit"].browse(target_unit_id) if target_unit_id else creator_unit
                 allowed_units = creator_unit.child_ids.ids + [creator_unit.id]
@@ -52,9 +82,6 @@ class ResUsers(models.Model):
                     raise UserError("Gerente só pode criar usuários na sua gerência ou coordenações abaixo dela.")
                 vals["sales_unit_id"] = target_unit.id
 
-            # ========================
-            # DIRETOR
-            # ========================
             elif creator.has_group("crm_sales_unit.group_director"):
                 target_unit = self.env["crm.sales.unit"].browse(target_unit_id) if target_unit_id else creator_unit
                 allowed_units = creator_unit.search([("id", "child_of", creator_unit.id)]).ids
@@ -62,72 +89,82 @@ class ResUsers(models.Model):
                     raise UserError("Diretor só pode criar usuários em sua diretoria ou subunidades abaixo dela.")
                 vals["sales_unit_id"] = target_unit.id
 
-            # ========================
-            # PRESIDENTE (SÓCIO)
-            # ========================
             elif creator.has_group("crm_sales_unit.group_president"):
                 if not target_unit_id and creator_unit:
                     vals["sales_unit_id"] = creator_unit.id
 
-            # Criação
+            # Criação real
             user = super(ResUsers, self).create([vals])
             user._check_unique_sales_unit_role()
+
+            # 🔗 Bind automático no lado da unidade
+            if user.sales_unit_id and user not in user.sales_unit_id.member_ids:
+                user.sales_unit_id.write({'member_ids': [(4, user.id)]})
+
             users |= user
 
-            # Log para auditoria
             _logger.info(
-                "Usuário [%s] criou um novo usuário [%s] na Unidade de Vendas ID [%s]",
-                creator.login,
-                vals.get("login", "sem_login"),
-                vals.get("sales_unit_id")
+                "Usuário [%s] criou [%s] vinculado à Unidade [%s]",
+                creator.login, user.login, user.sales_unit_id.display_name
             )
+
         return users
 
     def write(self, vals):
-        """Restringe movimentação de usuários entre unidades e garante unicidade de cargos"""
+        if self.env.user.id == SUPERUSER_ID:
+            return super().write(vals)
+
         if "sales_unit_id" in vals:
             mover = self.env.user
             mover_unit = mover.sales_unit_id
             target_unit = self.env["crm.sales.unit"].browse(vals["sales_unit_id"]) if vals["sales_unit_id"] else False
 
             for user in self:
-                # Coordenador
+                # 🔒 Regras hierárquicas
                 if mover.has_group("crm_sales_unit.group_coordinator"):
                     raise AccessError(_("Coordenador não pode mover usuários entre unidades."))
 
-                # Gerente
                 elif mover.has_group("crm_sales_unit.group_manager"):
                     allowed_units = mover_unit.child_ids.ids + [mover_unit.id]
                     if target_unit and target_unit.id not in allowed_units:
                         raise AccessError(_("Gerente só pode mover usuários dentro da sua gerência ou coordenações abaixo dela."))
 
-                # Diretor
                 elif mover.has_group("crm_sales_unit.group_director"):
                     allowed_units = mover_unit.search([("id", "child_of", mover_unit.id)]).ids
                     if target_unit and target_unit.id not in allowed_units:
                         raise AccessError(_("Diretor só pode mover usuários dentro da sua diretoria ou descendentes."))
 
-                # Presidente → sem restrição
                 elif mover.has_group("crm_sales_unit.group_president"):
-                    pass
+                    pass  # Sócio → sem restrição
 
                 else:
                     raise AccessError(_("Você não tem permissão para alterar a unidade de vendas de usuários."))
 
+        # Executa escrita
+        res = super().write(vals)
+
+        # 🔗 Atualiza members automaticamente
+        if "sales_unit_id" in vals:
+            for user in self:
+                old_units = self.env["crm.sales.unit"].search([("member_ids", "in", user.id)])
+                for unit in old_units:
+                    if unit != user.sales_unit_id:
+                        unit.write({'member_ids': [(3, user.id)]})
+
+                if user.sales_unit_id and user not in user.sales_unit_id.member_ids:
+                    user.sales_unit_id.write({'member_ids': [(4, user.id)]})
+
                 _logger.info(
-                    "Usuário [%s] moveu [%s] da Unidade [%s] para [%s]",
-                    mover.login,
+                    "Usuário [%s] movido para Unidade [%s]",
                     user.login,
-                    user.sales_unit_id.id,
-                    target_unit.id if target_unit else "Nenhuma"
+                    user.sales_unit_id.display_name if user.sales_unit_id else "Nenhuma"
                 )
 
-        res = super().write(vals)
         self._check_unique_sales_unit_role()
         return res
 
     def _check_unique_sales_unit_role(self):
-        """Impede que o usuário acumule cargos ao criar ou atualizar"""
+        """Impede múltiplos cargos"""
         role_groups = [
             self.env.ref("crm_sales_unit.group_coordinator", raise_if_not_found=False),
             self.env.ref("crm_sales_unit.group_manager", raise_if_not_found=False),

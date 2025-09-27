@@ -8,3 +8,7 @@ access_user_coordinator,res.users.coordinator,base.model_res_users,crm_sales_uni
 access_user_manager,res.users.manager,base.model_res_users,crm_sales_unit.group_manager,1,1,1,0
 access_user_director,res.users.director,base.model_res_users,crm_sales_unit.group_director,1,1,1,0
 access_user_president,res.users.president,base.model_res_users,crm_sales_unit.group_president,1,1,1,0
+access_crm_lead_coordinator,crm.lead.coordinator,crm.model_crm_lead,crm_sales_unit.group_coordinator,1,1,1,0
+access_crm_lead_manager,crm.lead.manager,crm.model_crm_lead,crm_sales_unit.group_manager,1,1,1,0
+access_crm_lead_director,crm.lead.director,crm.model_crm_lead,crm_sales_unit.group_director,1,1,1,0
+access_crm_lead_president,crm.lead.president,crm.model_crm_lead,crm_sales_unit.group_president,1,1,1,1

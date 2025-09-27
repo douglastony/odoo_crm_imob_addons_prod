@@ -12,11 +12,7 @@ class CRMSalesUnit(models.Model):
     # ============================
     # CAMPOS
     # ============================
-
-    name = fields.Char(
-        string="Nome",
-        required=True
-    )
+    name = fields.Char(string="Nome", required=True)
 
     type = fields.Selection(
         [
@@ -49,10 +45,12 @@ class CRMSalesUnit(models.Model):
         string="Responsável da Unidade",
         required=True
     )
-    member_ids = fields.Many2many(
+    member_ids = fields.One2many(
         "res.users",
+        "sales_unit_id",
         string="Membros (Corretores)"
     )
+
 
     # Status
     active = fields.Boolean(default=True)
@@ -62,7 +60,7 @@ class CRMSalesUnit(models.Model):
     # ============================
 
     def write(self, vals):
-        """Impede arquivar unidade com membros ainda ativos"""
+        """Impede arquivar unidade com membros ainda ativos e sincroniza usuários"""
         if "active" in vals and vals["active"] is False:
             for unit in self:
                 if unit.member_ids:
@@ -70,15 +68,22 @@ class CRMSalesUnit(models.Model):
                         "Não é possível arquivar a unidade '%s' enquanto ainda houver membros associados. "
                         "Remaneje os corretores antes de arquivar." % unit.name
                     )
+
         res = super().write(vals)
-        # Reforça validação após salvar
+
+        # Reforça validações
         self._check_unique_responsible()
         self._check_parent_unit()
-        return res
+
+        # 🔗 Sincroniza responsável → sales_unit_id
+        if "responsible_id" in vals:
+            for unit in self:
+                if unit.responsible_id:
+                    unit.responsible_id.write({"sales_unit_id": unit.id})
 
     @api.constrains("responsible_id", "active")
     def _check_unique_responsible(self):
-        """Garante que cada responsável só lidere uma unidade ativa por vez"""
+        """Cada responsável só pode liderar uma unidade ativa"""
         for unit in self:
             if unit.active and unit.responsible_id:
                 conflict = self.search([
@@ -95,7 +100,7 @@ class CRMSalesUnit(models.Model):
 
     @api.constrains("type", "parent_id")
     def _check_parent_unit(self):
-        """Garante que apenas Presidência pode não ter unidade superior"""
+        """Somente Presidência pode não ter unidade superior"""
         for unit in self:
             if unit.type != "presidencia" and not unit.parent_id:
                 raise ValidationError(
@@ -104,7 +109,7 @@ class CRMSalesUnit(models.Model):
                 )
 
     def unlink(self):
-        """Bloqueia qualquer exclusão de unidades"""
+        """Proíbe exclusão: apenas arquivar"""
         raise UserError(
             "Não é permitido excluir unidades de vendas. "
             "Apenas arquive para manter o histórico intacto."
