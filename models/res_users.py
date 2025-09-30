@@ -26,25 +26,33 @@ class ResUsers(models.Model):
     )
 
     @api.depends(
-        "sales_unit_id",
-        "sales_unit_id.child_ids",
-        "sales_unit_id.parent_id",
-        "sales_unit_id.member_ids",
-        "sales_unit_id.responsible_id"
-    )   
+    "sales_unit_id",
+    "sales_unit_id.child_ids",
+    "sales_unit_id.parent_id",
+    "sales_unit_id.member_ids",
+    "sales_unit_id.responsible_id"
+)
     def _compute_allowed_user_ids(self):
         for user in self:
             allowed = user  # sempre inclui o próprio
 
             if user.sales_unit_id:
-                # pega todas as unidades abaixo (recursivamente)
+                # Descendentes (abaixo do usuário)
                 descendant_units = self.env["crm.sales.unit"].search([
                     ("id", "child_of", user.sales_unit_id.id)
                 ])
 
-                # inclui membros e responsáveis de todas as unidades
-                allowed |= descendant_units.mapped("member_ids")
-                allowed |= descendant_units.mapped("responsible_id")
+                # Ascendentes (acima do usuário)
+                ancestor_units = self.env["crm.sales.unit"].search([
+                    ("id", "parent_of", user.sales_unit_id.id)
+                ])
+
+                # Todas as unidades relevantes (acima + abaixo + própria)
+                all_units = descendant_units | ancestor_units | user.sales_unit_id
+
+                # Pega todos os membros + responsáveis dessas unidades
+                allowed |= all_units.mapped("member_ids")
+                allowed |= all_units.mapped("responsible_id")
 
             user.allowed_user_ids = allowed
 
