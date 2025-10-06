@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="view_crm_sales_schedule_tree" model="ir.ui.view">
+        <field name="name">crm.sales.schedule.list</field>
+        <field name="model">crm.sales.schedule</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="date"/>
+                <field name="hora_inicio"/>
+                <field name="hora_fim"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_crm_sales_schedule_form" model="ir.ui.view">
+        <field name="name">crm.sales.schedule.form</field>
+        <field name="model">crm.sales.schedule</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <field name="date"/>
+                        <field name="hora_inicio"/>
+                        <field name="hora_fim"/>
+                        <field name="active"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_crm_sales_schedule" model="ir.actions.act_window">
+        <field name="name">Configuração de Expediente</field>
+        <field name="res_model">crm.sales.schedule</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <menuitem id="menu_crm_sales_schedule"
+              name="Configuração de Expediente"
+              parent="crm.crm_menu_root"
+              action="action_crm_sales_schedule"
+              groups="crm_sales_unit.group_president"/>
+</odoo>

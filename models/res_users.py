@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timedelta
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError, ValidationError, AccessError
 from odoo import SUPERUSER_ID
@@ -9,6 +10,9 @@ _logger = logging.getLogger(__name__)
 class ResUsers(models.Model):
     _inherit = "res.users"
 
+    # ============================
+    # CAMPOS
+    # ============================
     sales_unit_id = fields.Many2one(
         "crm.sales.unit",
         string="Unidade de Vendas",
@@ -25,37 +29,49 @@ class ResUsers(models.Model):
         store=True
     )
 
+    # 🔹 Controle do round robin
+    last_lead_assigned_at = fields.Datetime(
+        string="Última distribuição de lead",
+        default=False
+    )
+
+    # 🔹 Controle de presença (check-in)
+    is_checked_in = fields.Boolean(
+        string="Disponível para distribuição",
+        default=False
+    )
+
+    # ============================
+    # VISIBILIDADE DE LEADS
+    # ============================
     @api.depends(
-    "sales_unit_id",
-    "sales_unit_id.child_ids",
-    "sales_unit_id.parent_id",
-    "sales_unit_id.member_ids",
-    "sales_unit_id.responsible_id"
-)
+        "sales_unit_id",
+        "sales_unit_id.child_ids",
+        "sales_unit_id.parent_id",
+        "sales_unit_id.member_ids",
+        "sales_unit_id.responsible_id",
+    )
     def _compute_allowed_user_ids(self):
         for user in self:
             allowed = user  # sempre inclui o próprio
 
             if user.sales_unit_id:
-                # Descendentes (abaixo do usuário)
                 descendant_units = self.env["crm.sales.unit"].search([
                     ("id", "child_of", user.sales_unit_id.id)
                 ])
-
-                # Ascendentes (acima do usuário)
                 ancestor_units = self.env["crm.sales.unit"].search([
                     ("id", "parent_of", user.sales_unit_id.id)
                 ])
-
-                # Todas as unidades relevantes (acima + abaixo + própria)
                 all_units = descendant_units | ancestor_units | user.sales_unit_id
 
-                # Pega todos os membros + responsáveis dessas unidades
                 allowed |= all_units.mapped("member_ids")
                 allowed |= all_units.mapped("responsible_id")
 
             user.allowed_user_ids = allowed
 
+    # ============================
+    # CREATE / WRITE
+    # ============================
     @api.model_create_multi
     def create(self, vals_list):
         users = self.env['res.users']
@@ -148,7 +164,6 @@ class ResUsers(models.Model):
                 else:
                     raise AccessError(_("Você não tem permissão para alterar a unidade de vendas de usuários."))
 
-        # Executa escrita
         res = super().write(vals)
 
         # 🔗 Atualiza members automaticamente
@@ -171,6 +186,9 @@ class ResUsers(models.Model):
         self._check_unique_sales_unit_role()
         return res
 
+    # ============================
+    # REGRAS
+    # ============================
     def _check_unique_sales_unit_role(self):
         """Impede múltiplos cargos"""
         role_groups = [
