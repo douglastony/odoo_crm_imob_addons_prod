@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime, timedelta
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError, ValidationError, AccessError
 from odoo import SUPERUSER_ID
@@ -10,9 +9,6 @@ _logger = logging.getLogger(__name__)
 class ResUsers(models.Model):
     _inherit = "res.users"
 
-    # ============================
-    # CAMPOS
-    # ============================
     sales_unit_id = fields.Many2one(
         "crm.sales.unit",
         string="Unidade de Vendas",
@@ -29,49 +25,50 @@ class ResUsers(models.Model):
         store=True
     )
 
-    # 🔹 Controle do round robin
-    last_lead_assigned_at = fields.Datetime(
-        string="Última distribuição de lead",
-        default=False
-    )
-
-    # 🔹 Controle de presença (check-in)
-    is_checked_in = fields.Boolean(
-        string="Disponível para distribuição",
-        default=False
-    )
-
-    # ============================
-    # VISIBILIDADE DE LEADS
-    # ============================
     @api.depends(
         "sales_unit_id",
         "sales_unit_id.child_ids",
-        "sales_unit_id.parent_id",
         "sales_unit_id.member_ids",
         "sales_unit_id.responsible_id",
+        "groups_id" # Adicionar groups_id para recomputar quando os grupos mudam
+    )
+    @api.depends(
+        "sales_unit_id",
+        "sales_unit_id.child_ids",
+        "sales_unit_id.member_ids",
+        "sales_unit_id.responsible_id",
+        "groups_id" # Adicionar groups_id para recomputar quando os grupos mudam
     )
     def _compute_allowed_user_ids(self):
         for user in self:
-            allowed = user  # sempre inclui o próprio
+            allowed_users = self.env["res.users"] # Inicializa como um recordset vazio
+            allowed_users |= user # Sempre inclui o próprio usuário
 
-            if user.sales_unit_id:
-                descendant_units = self.env["crm.sales.unit"].search([
-                    ("id", "child_of", user.sales_unit_id.id)
-                ])
-                ancestor_units = self.env["crm.sales.unit"].search([
-                    ("id", "parent_of", user.sales_unit_id.id)
-                ])
-                all_units = descendant_units | ancestor_units | user.sales_unit_id
+            # 1. Presidente vê todos os usuários
+            if user.has_group("crm_sales_unit.group_president"):
+                allowed_users = self.env["res.users"].search([]) # Presidente vê todos
 
-                allowed |= all_units.mapped("member_ids")
-                allowed |= all_units.mapped("responsible_id")
+            # 2. Para usuários que são responsáveis por *alguma* unidade (Coordenador, Gerente, Diretor)
+            else: # Se não for Presidente, verifica se é responsável por alguma unidade
+                responsible_for_unit = self.env["crm.sales.unit"].search([
+                    ("responsible_id", "=", user.id)
+                ], limit=1, order="type desc") # Prioriza unidades de nível superior
 
-            user.allowed_user_ids = allowed
+                if responsible_for_unit:
+                    # Inclui a própria unidade responsável e todas as unidades descendentes dela
+                    descendant_units = self.env["crm.sales.unit"].search([
+                        ("id", "child_of", responsible_for_unit.id)
+                    ])
 
-    # ============================
-    # CREATE / WRITE
-    # ============================
+                    # Pega todos os membros e responsáveis dessas unidades descendentes
+                    allowed_users |= descendant_units.mapped("member_ids")
+                    allowed_users |= descendant_units.mapped("responsible_id")
+
+                # Se não for Presidente e não for responsável por nenhuma unidade,
+                # allowed_users já contém apenas o próprio usuário (inicializado na linha 3).
+
+            user.allowed_user_ids = allowed_users
+
     @api.model_create_multi
     def create(self, vals_list):
         users = self.env['res.users']
@@ -164,6 +161,7 @@ class ResUsers(models.Model):
                 else:
                     raise AccessError(_("Você não tem permissão para alterar a unidade de vendas de usuários."))
 
+        # Executa escrita
         res = super().write(vals)
 
         # 🔗 Atualiza members automaticamente
@@ -186,9 +184,6 @@ class ResUsers(models.Model):
         self._check_unique_sales_unit_role()
         return res
 
-    # ============================
-    # REGRAS
-    # ============================
     def _check_unique_sales_unit_role(self):
         """Impede múltiplos cargos"""
         role_groups = [

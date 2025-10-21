@@ -23,10 +23,7 @@ Módulo customizado para implementar hierarquia de unidades de vendas
         'security/ir.model.access.csv',     # depois aplica regras de acesso
         'security/crm_lead_rules.xml',
         'views/crm_sales_unit_views.xml',   # só então views/menus
-        'views/res_users_views.xml',
-        "views/crm_sales_schedule_views.xml",
-        "views/res_config_settings_views.xml",
-        "data/crm_lead_cron.xml",   # <-- novo        
+        'views/res_users_views.xml',   # <-- novo        
     ],
     'demo': [],
     'installable': True,
