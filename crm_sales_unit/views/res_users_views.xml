@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <record id="view_users_form_inherit_sales_unit" model="ir.ui.view">
+        <field name="name">res.users.form.inherit.sales.unit</field>
+        <field name="model">res.users</field>
+        <field name="inherit_id" ref="base.view_users_form"/>
+        <field name="arch" type="xml">
+
+            <!-- insere abaixo da seção CRM SALES UNIT -->
+        <xpath expr="//page[@name='access_rights']" position="inside">
+            <group string="Unidade de Vendas">
+                <field name="sales_unit_id" options="{'no_create': False}"/>
+            </group>
+        </xpath>
+        </field>
+    </record>
+
+</odoo>
