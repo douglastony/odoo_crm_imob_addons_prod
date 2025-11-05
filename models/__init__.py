@@ -3,4 +3,5 @@ from . import res_users
 from . import crm_sales_unit
 from . import crm_leads
 from . import calendar_event
+from . import quick_create_opportunity_wizard
 

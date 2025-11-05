@@ -1,39 +1,34 @@
-<?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <data>
+  <data>
+    <record id="crm_lead_kanban_custom" model="ir.ui.view">
+      <field name="name">crm.lead.kanban.custom</field>
+      <field name="model">crm.lead</field>
+      <field name="inherit_id" ref="crm.crm_case_kanban_view_leads"/>
+      <field name="priority" eval="0"/>
+      <field name="arch" type="xml">
+        <xpath expr="//kanban" position="attributes">
+          <!-- Substitui o quick_create padrão pelo wizard -->
+          <attribute name="on_create">crm_sales_unit.action_crm_opportunity_quick_create_wizard</attribute>
+          <attribute name="quick_create">false</attribute>
+          <attribute name="quick_create_view"/>
+        </xpath>
 
-        <!-- View Kanban Customizada para CRM Lead -->
-        <record id="crm_lead_kanban_custom" model="ir.ui.view">
-            <field name="name">crm.lead.kanban.custom</field>
-            <field name="model">crm.lead</field>
-            <field name="inherit_id" ref="crm.view_crm_lead_kanban"/>
-            <field name="priority">120</field>
-            <field name="arch" type="xml">
-
-                <!-- Remove o nome original -->
-                <xpath expr="//field[@name='name']" position="attributes">
-                    <attribute name="invisible">1</attribute>
-                </xpath>
-
-                <!-- Adiciona nome do contato e responsável no topo do card -->
-                <xpath expr="//field[@name='tag_ids']" position="before">
-                    <div class="o_kanban_record_top">
-                        <field name="contact_name" class="fw-bold fs-5">
-                            <t t-if="record.contact_name.raw_value">
-                                <t t-esc="record.contact_name.value"/>
-                            </t>
-                            <t t-else="">
-                                <t t-esc="record.name.value"/>
-                            </t>
-                        </field>
-                        <div class="text-muted small">
-                            <field name="user_id" widget="many2one"/>
-                        </div>
-                    </div>
-                </xpath>
-
-            </field>
-        </record>
-
-    </data>
+        <!-- Mantém o template do card customizado -->
+        <xpath expr="//templates/t[@t-name='card']" position="replace">
+          <t t-name="card">
+            <field name="partner_id" class="fw-bold fs-5"/>
+            <field name="user_id"/>
+            <field name="tag_ids" widget="many2many_tags" options="{'color_field': 'color'}"/>
+            <footer class="pt-1 mt-0">
+              <div class="d-flex mt-auto">
+                <field name="priority" widget="priority" class="me-2"/>
+                <field name="activity_ids" widget="kanban_activity"/>
+              </div>
+              <field name="user_id" widget="many2one_avatar_user" domain="[('share', '=', False)]" class="ms-auto"/>
+            </footer>
+          </t>
+        </xpath>
+      </field>
+    </record>
+  </data>
 </odoo>

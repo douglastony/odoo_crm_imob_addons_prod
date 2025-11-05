@@ -23,8 +23,9 @@ Módulo customizado para implementar hierarquia de unidades de vendas
         'security/sales_unit_groups.xml',   # cria os grupos primeiro
         'security/ir.model.access.csv',     # depois aplica regras de acesso
         'security/crm_lead_rules.xml',
-        'security/res_partner_rules.xml',
         "security/calendar_event_rules.xml",
+        'views/quick_create_opportunity_wizard_views.xml',
+        'views/quick_create_opportunity_wizard_action.xml',
         'views/crm_lead_kanban_custom.xml',
         'views/crm_sales_unit_views.xml',   # só então views/menus
         'views/res_users_views.xml',   # <-- novo        

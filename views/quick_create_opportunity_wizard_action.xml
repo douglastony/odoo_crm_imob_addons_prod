@@ -1,0 +1,12 @@
+<odoo>
+  <data>
+    <record id="action_crm_opportunity_quick_create_wizard" model="ir.actions.act_window">
+      <field name="name">Criar Oportunidade Rápida</field>
+      <field name="res_model">crm.opportunity.quick.create.wizard</field>
+      <field name="view_mode">form</field>
+      <field name="target">new</field>
+      <field name="view_id" ref="crm_sales_unit.view_crm_opportunity_quick_create_wizard_form"/>
+      <field name="views" eval="[(ref('crm_sales_unit.view_crm_opportunity_quick_create_wizard_form'), 'form')]"/>
+    </record>
+  </data>
+</odoo>

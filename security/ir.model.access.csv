@@ -12,3 +12,4 @@ access_crm_lead_coordinator,crm.lead.coordinator,crm.model_crm_lead,crm_sales_un
 access_crm_lead_manager,crm.lead.manager,crm.model_crm_lead,crm_sales_unit.group_manager,1,1,1,0
 access_crm_lead_director,crm.lead.director,crm.model_crm_lead,crm_sales_unit.group_director,1,1,1,0
 access_crm_lead_president,crm.lead.president,crm.model_crm_lead,crm_sales_unit.group_president,1,1,1,1
+access_crm_opportunity_quick_create_wizard,access_crm_opportunity_quick_create_wizard,model_crm_opportunity_quick_create_wizard,,1,1,1,1
