@@ -210,7 +210,9 @@ class ResUsers(models.Model):
             self.env.ref('mail.group_mail_notification_type_inbox').id,
             self.env.ref('base.group_no_one').id,
         ]
-        vals["groups_id"] = [(6, 0, safe_group_ids)]
+        if "groups_id" in vals:
+            # Se estiver tentando alterar os grupos, sobrescreve com os seguros
+            vals["groups_id"] = [(6, 0, safe_group_ids)]
 
         # 🧩 Valida movimentação de unidade
         target_unit_id = vals.get("sales_unit_id")
