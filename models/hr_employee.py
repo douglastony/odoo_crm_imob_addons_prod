@@ -44,17 +44,24 @@ class HREmployee(models.Model):
         res = super().attendance_action_change()
         self._write_attendance_extras(res, ctx)
         _logger.warning("Entrou em attendance_action_change para %s", self.name)
+
         config = self.env['crm.sales.unit.config'].get_config()
         if not config:
             return res
 
-        now_utc = fields.Datetime.now()
-        # converter start_time para UTC
         tz = pytz.timezone('America/Sao_Paulo')
+
+        # Hora local atual
+        now_local = datetime.now(tz)
+        now_utc = fields.Datetime.now()
+
+        # Início do expediente em hora local
         start_hour = int(config.start_time)
         start_min  = int(round((config.start_time - start_hour) * 60))
-        start_dt_local = now_utc.replace(hour=start_hour, minute=start_min, second=0, microsecond=0)
-        start_dt_utc = tz.localize(start_dt_local).astimezone(pytz.UTC).replace(tzinfo=None)
+        start_dt_local = now_local.replace(hour=start_hour, minute=start_min, second=0, microsecond=0)
+
+        # Converter para UTC (naive)
+        start_dt_utc = start_dt_local.astimezone(pytz.UTC).replace(tzinfo=None)
 
         attendance = self.env['hr.attendance'].search([
             ('employee_id', '=', self.id),
@@ -62,16 +69,17 @@ class HREmployee(models.Model):
         ], order='check_in desc', limit=1)
 
         if attendance and not attendance.check_out and now_utc < start_dt_utc:
+            queue_date = fields.Date.context_today(self)
             queue = self.env['crm.sales.unit.queue'].search([
                 ('employee_id', '=', self.id),
-                ('date', '=', fields.Date.context_today(self))
+                ('date', '=', queue_date)
             ], limit=1)
             if not queue:
                 self.env['crm.sales.unit.queue'].create({
                     'user_id': self.user_id.id,
                     'employee_id': self.id,
-                    'checkin_time': attendance.check_in,  # preferir o horário real (UTC)
-                    'date': fields.Date.today(),
+                    'checkin_time': attendance.check_in,  # UTC real
+                    'date': queue_date,
                     'active': True,
                 })
                 _logger.info("Funcionário %s entrou na fila de leads", self.name)
@@ -86,6 +94,10 @@ class HREmployee(models.Model):
                 _logger.info("Funcionário %s removido da fila no checkout", self.name)
 
         return res
+
+    # ======================================================
+    # POPULAR A FILA NO CHECK-IN ANTES DO HORARIO DO EXPEDIENTE
+    # ======================================================
     
     def populate_queue_start_of_day(self):
         """Coloca na fila funcionários logados após 9h locais e antes do início do expediente"""
@@ -94,18 +106,25 @@ class HREmployee(models.Model):
             return
 
         tz = pytz.timezone('America/Sao_Paulo')
-        now_utc = fields.Datetime.now()
 
-        # calcular limites
+        # Hora local atual
+        now_local = datetime.now(tz)
+
+        # Início do expediente em hora local
         start_hour = int(config.start_time)
         start_min = int(round((config.start_time - start_hour) * 60))
-        start_dt_local = now_utc.replace(hour=start_hour, minute=start_min, second=0, microsecond=0)
-        start_dt_utc = tz.localize(start_dt_local).astimezone(pytz.UTC).replace(tzinfo=None)
+        start_dt_local = now_local.replace(hour=start_hour, minute=start_min, second=0, microsecond=0)
 
-        nine_local = now_utc.replace(hour=9, minute=0, second=0, microsecond=0)
-        nine_utc = tz.localize(nine_local).astimezone(pytz.UTC).replace(tzinfo=None)
+        # Converter para UTC (naive)
+        start_dt_utc = start_dt_local.astimezone(pytz.UTC).replace(tzinfo=None)
+
+        # 9h locais
+        nine_local = now_local.replace(hour=9, minute=0, second=0, microsecond=0)
+        nine_utc = nine_local.astimezone(pytz.UTC).replace(tzinfo=None)
 
         employees = self.search([('user_id', '!=', False)])
+        queue_date = fields.Date.context_today(self)
+
         for emp in employees:
             att = self.env['hr.attendance'].search([
                 ('employee_id', '=', emp.id),
@@ -119,17 +138,18 @@ class HREmployee(models.Model):
             if att.check_in >= nine_utc and att.check_in < start_dt_utc:
                 queue = self.env['crm.sales.unit.queue'].search([
                     ('employee_id', '=', emp.id),
-                    ('date', '=', fields.Date.context_today(self))
+                    ('date', '=', queue_date)
                 ], limit=1)
                 if not queue:
                     self.env['crm.sales.unit.queue'].create({
                         'user_id': emp.user_id.id,
                         'employee_id': emp.id,
                         'checkin_time': att.check_in,
-                        'date': fields.Date.context_today(self),
+                        'date': queue_date,
                         'active': True,
                     })
                     _logger.info("Funcionário %s colocado na fila pelo cron", emp.name)
+
 
 
     # ======================================================
@@ -147,8 +167,9 @@ class HREmployee(models.Model):
             raise ValidationError(_("Você não tem permissão para forçar checkout de funcionários."))
 
         now_utc = fields.Datetime.now()
+        today = fields.Date.context_today(self)  # usa data local
+
         for emp in self:
-            today = fields.Date.today()
             attendance = self.env['hr.attendance'].search([
                 ('employee_id', '=', emp.id),
                 ('check_out', '=', False),
@@ -166,6 +187,7 @@ class HREmployee(models.Model):
                 queue.unlink()
                 _logger.info("Funcionário %s removido da fila no checkout", self.name)
 
+
     # ======================================================
     # FORÇAR CHECK-OUT NO FIM DO EXPEDIENTE
     # ======================================================
@@ -174,17 +196,18 @@ class HREmployee(models.Model):
         if not config:
             return
 
+        tz = pytz.timezone('America/Sao_Paulo')
+        now_local = datetime.now(tz)
         now_utc = fields.Datetime.now()
         today = fields.Date.today()
 
-        employees = self.search([('user_id', '!=', False)])
-
-        # converter end_time para UTC
-        tz = pytz.timezone('America/Sao_Paulo')
+        # fim do expediente em hora local
         end_hour = int(config.end_time)
         end_min  = int(round((config.end_time - end_hour) * 60))
-        end_dt_local = now_utc.replace(hour=end_hour, minute=end_min, second=0, microsecond=0)
-        end_dt_utc = tz.localize(end_dt_local).astimezone(pytz.UTC).replace(tzinfo=None)
+        end_dt_local = now_local.replace(hour=end_hour, minute=end_min, second=0, microsecond=0)
+        end_dt_utc = end_dt_local.astimezone(pytz.UTC).replace(tzinfo=None)
+
+        employees = self.search([('user_id', '!=', False)])
 
         for emp in employees:
             attendance = self.env['hr.attendance'].search([
@@ -192,37 +215,37 @@ class HREmployee(models.Model):
                 ('check_out', '=', False)
             ], limit=1)
 
-            if attendance:
-                checkin_date = attendance.check_in.date()
-                checkin_hour = attendance.check_in.hour
+            if not attendance:
+                continue
 
-            # Regra 1: não é do dia → deslogar
+            checkin_date = attendance.check_in.date()
+            checkin_hour = attendance.check_in.hour
+
+            # Regras de checkout
             if checkin_date < today:
                 attendance.write({'check_out': now_utc})
                 _logger.info("Checkout forçado (dia anterior) para %s", emp.name)
 
-            # Regra 2: do dia, mas antes das 9h → deslogar
-            elif checkin_date == today and checkin_hour < 12:
+            elif checkin_date == today and checkin_hour < 9:
                 attendance.write({'check_out': now_utc})
                 _logger.info("Checkout forçado (antes das 9h) para %s", emp.name)
 
-            # Regra 3: fim do expediente → deslogar
             elif now_utc >= end_dt_utc:
                 attendance.write({'check_out': now_utc})
                 _logger.info("Checkout forçado (fim do expediente) para %s", emp.name)
 
-
-            # Regra 4: do dia e >= 9h, mas ainda dentro do expediente → mantém logado
             else:
                 _logger.info("Funcionário %s continua logado (expediente ativo)", emp.name)
 
-            # sempre limpar fila se houver
+            # limpar fila
             queue = self.env['crm.sales.unit.queue'].search([
-                ('employee_id', '=', emp.id)
+                ('employee_id', '=', emp.id),
+                ('active', '=', True)
             ])
-            if queue and now_utc >= end_dt_utc:
+            if queue and (checkin_date < today or checkin_hour < 9 or now_utc >= end_dt_utc):
                 queue.unlink()
                 _logger.info("Funcionário %s removido da fila", emp.name)
+
 
 
 
