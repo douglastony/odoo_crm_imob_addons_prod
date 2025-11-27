@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Ação de Janela para Localizações Permitidas -->
+        <record id="action_crm_sales_unit_location" model="ir.actions.act_window">
+            <field name="name">Localizações Permitidas</field>
+            <field name="res_model">crm.sales.unit.location</field>
+            <field name="view_mode">list,form</field>
+        </record>
+
+        <!-- View list para Localizações Permitidas -->
+        <record id="view_crm_sales_unit_location_list" model="ir.ui.view">
+            <field name="name">crm.sales.unit.location.list</field>
+            <field name="model">crm.sales.unit.location</field>
+            <field name="arch" type="xml">
+                <list string="Localizações Permitidas">
+                    <field name="name"/>
+                    <field name="latitude"/>
+                    <field name="longitude"/>
+                    <field name="radius"/>
+                </list>
+            </field>
+        </record>
+
+        <!-- View Form para Localizações Permitidas -->
+        <record id="view_crm_sales_unit_location_form" model="ir.ui.view">
+            <field name="name">crm.sales.unit.location.form</field>
+            <field name="model">crm.sales.unit.location</field>
+            <field name="arch" type="xml">
+                <form string="Localização Permitida">
+                    <sheet>
+                        <group>
+                            <field name="name"/>
+                            <field name="latitude"/>
+                            <field name="longitude"/>
+                            <field name="radius"/>
+                        </group>
+                        <p class="o_form_label">
+                            <i class="fa fa-info-circle"/> O raio de tolerância é a distância máxima (em metros) que o usuário pode estar do ponto central para que o check-in seja validado.
+                        </p>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- Ação de Janela para IPs Permitidos -->
+        <record id="action_crm_sales_unit_ip" model="ir.actions.act_window">
+            <field name="name">IPs/Ranges Permitidos</field>
+            <field name="res_model">crm.sales.unit.ip</field>
+            <field name="view_mode">list,form</field>
+        </record>
+
+        <!-- View list para IPs Permitidos -->
+        <record id="view_crm_sales_unit_ip_list" model="ir.ui.view">
+            <field name="name">crm.sales.unit.ip.list</field>
+            <field name="model">crm.sales.unit.ip</field>
+            <field name="arch" type="xml">
+                <list string="IPs/Ranges Permitidos">
+                    <field name="cidr"/>
+                </list>
+            </field>
+        </record>
+
+        <!-- View Form para IPs Permitidos -->
+        <record id="view_crm_sales_unit_ip_form" model="ir.ui.view">
+            <field name="name">crm.sales.unit.ip.form</field>
+            <field name="model">crm.sales.unit.ip</field>
+            <field name="arch" type="xml">
+                <form string="IP ou Range Permitido">
+                    <sheet>
+                        <group>
+                            <field name="cidr" string="IP ou Range (CIDR)"/>
+                        </group>
+                        <p class="o_form_label">
+                            <i class="fa fa-info-circle"/> Informe um IP único (ex.: 177.27.6.243) ou um range CIDR (ex.: 177.27.0.0/16).
+                        </p>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- Menu de Configuração -->
+        <menuitem id="menu_crm_sales_unit_config"
+                  name="Configurações de Unidade"
+                  parent="crm.crm_menu_root"
+                  sequence="100"
+                  groups="crm_sales_unit.group_manager,crm_sales_unit.group_director,crm_sales_unit.group_president"/>
+
+        <menuitem id="menu_crm_sales_unit_location"
+                  name="Localizações"
+                  parent="menu_crm_sales_unit_config"
+                  action="action_crm_sales_unit_location"
+                  sequence="10"/>
+
+        <menuitem id="menu_crm_sales_unit_ip"
+                  name="IPs/Ranges"
+                  parent="menu_crm_sales_unit_config"
+                  action="action_crm_sales_unit_ip"
+                  sequence="20"/>
+
+        <!-- Fila de Corretores -->
+        <record id="action_crm_sales_unit_queue" model="ir.actions.act_window">
+            <field name="name">Fila de Corretores</field>
+            <field name="res_model">crm.sales.unit.queue</field>
+            <field name="view_mode">list,form</field>
+        </record>
+
+        <record id="view_crm_sales_unit_queue_list" model="ir.ui.view">
+            <field name="name">crm.sales.unit.queue.list</field>
+            <field name="model">crm.sales.unit.queue</field>
+            <field name="arch" type="xml">
+                <list string="Fila de Corretores">
+                    <field name="user_id"/>
+                    <field name="employee_id"/>
+                    <field name="checkin_time"/>
+                    <field name="active"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_crm_sales_unit_queue_form" model="ir.ui.view">
+            <field name="name">crm.sales.unit.queue.form</field>
+            <field name="model">crm.sales.unit.queue</field>
+            <field name="arch" type="xml">
+                <form string="Fila de Corretores">
+                    <sheet>
+                        <group>
+                            <field name="user_id"/>
+                            <field name="employee_id"/>
+                            <field name="checkin_time"/>
+                            <field name="active"/>
+                        </group>
+                        <footer>
+                            <button name="remove_from_queue" type="object" string="Remover da Fila" class="btn-danger"/>
+                        </footer>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <menuitem id="menu_crm_sales_unit_queue"
+                  name="Fila de Corretores"
+                  parent="menu_crm_sales_unit_config"
+                  action="action_crm_sales_unit_queue"
+                  sequence="30"
+                  groups="crm_sales_unit.group_coordinator,crm_sales_unit.group_manager,crm_sales_unit.group_director,crm_sales_unit.group_president"/>
+
+        <!-- Configuração de Expediente (comentado para uso futuro) -->
+        <!--
+        <record id="action_crm_sales_unit_schedule" model="ir.actions.act_window">
+            <field name="name">Configuração de Expediente</field>
+            <field name="res_model">crm.sales.unit.schedule</field>
+            <field name="view_mode">list,form</field>
+        </record>
+
+        <menuitem id="menu_crm_sales_unit_schedule"
+                  name="Configuração de Expediente"
+                  parent="crm.crm_menu_root"
+                  action="action_crm_sales_unit_schedule"
+                  sequence="20"
+                  groups="crm_sales_unit.group_manager,crm_sales_unit.group_director,crm_sales_unit.group_president"/>
+        -->
+    </data>
+</odoo>

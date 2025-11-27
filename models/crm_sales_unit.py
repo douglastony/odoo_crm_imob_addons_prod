@@ -2,18 +2,14 @@
 from odoo import models, fields, api
 from odoo.exceptions import UserError, ValidationError
 
-
 class CRMSalesUnit(models.Model):
     _name = "crm.sales.unit"
     _description = "Unidade de Vendas (CRM)"
     _parent_store = True
     _parent_name = "parent_id"
 
-    # ============================
-    # CAMPOS
-    # ============================
+    # Campos básicos
     name = fields.Char(string="Nome", required=True)
-
     type = fields.Selection(
         [
             ("presidencia", "Presidência"),
@@ -32,35 +28,18 @@ class CRMSalesUnit(models.Model):
         index=True,
         ondelete="cascade"
     )
-    child_ids = fields.One2many(
-        "crm.sales.unit",
-        "parent_id",
-        string="Subunidades"
-    )
+    child_ids = fields.One2many("crm.sales.unit", "parent_id", string="Subunidades")
     parent_path = fields.Char(index=True)
 
     # Usuários
-    responsible_id = fields.Many2one(
-        "res.users",
-        string="Responsável da Unidade",
-        required=True
-    )
-    member_ids = fields.One2many(
-        "res.users",
-        "sales_unit_id",
-        string="Membros (Corretores)"
-    )
-
+    responsible_id = fields.Many2one("res.users", string="Responsável da Unidade", required=True)
+    member_ids = fields.One2many("res.users", "sales_unit_id", string="Membros (Corretores)")
 
     # Status
     active = fields.Boolean(default=True)
 
-    # ============================
-    # REGRAS DE NEGÓCIO
-    # ============================
-
+    # Regras de negócio
     def write(self, vals):
-        """Impede arquivar unidade com membros ainda ativos e sincroniza usuários"""
         if "active" in vals and vals["active"] is False:
             for unit in self:
                 if unit.member_ids:
@@ -71,19 +50,19 @@ class CRMSalesUnit(models.Model):
 
         res = super().write(vals)
 
-        # Reforça validações
         self._check_unique_responsible()
         self._check_parent_unit()
 
-        # 🔗 Sincroniza responsável → sales_unit_id
+        # Sincroniza responsável → sales_unit_id
         if "responsible_id" in vals:
             for unit in self:
                 if unit.responsible_id:
                     unit.responsible_id.write({"sales_unit_id": unit.id})
 
+        return res
+
     @api.constrains("responsible_id", "active")
     def _check_unique_responsible(self):
-        """Cada responsável só pode liderar uma unidade ativa"""
         for unit in self:
             if unit.active and unit.responsible_id:
                 conflict = self.search([
@@ -100,7 +79,6 @@ class CRMSalesUnit(models.Model):
 
     @api.constrains("type", "parent_id")
     def _check_parent_unit(self):
-        """Somente Presidência pode não ter unidade superior"""
         for unit in self:
             if unit.type != "presidencia" and not unit.parent_id:
                 raise ValidationError(
@@ -109,7 +87,6 @@ class CRMSalesUnit(models.Model):
                 )
 
     def unlink(self):
-        """Proíbe exclusão: apenas arquivar"""
         raise UserError(
             "Não é permitido excluir unidades de vendas. "
             "Apenas arquive para manter o histórico intacto."

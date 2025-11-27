@@ -13,27 +13,33 @@ class QuickCreateOpportunityWizard(models.TransientModel):
     name = fields.Char(string='Nome do Cliente', required=True)
     phone = fields.Char(string='Telefone', required=True)
 
-    def _clean_phone(self, phone):
+    def _normalize_phone(self, phone):
         if not phone:
             return False
         cleaned = re.sub(r'\D', '', phone)
         _logger.debug("Telefone original: %s | Telefone limpo: %s", phone, cleaned)
-        return cleaned
+
+        if len(cleaned) == 9:
+            return '21' + cleaned
+        elif len(cleaned) == 11:
+            return cleaned
+        else:
+            raise ValidationError(_("O telefone deve conter 9 ou 11 dígitos."))
 
     def action_create_opportunity(self):
         self.ensure_one()
         _logger.info("Iniciando criação de oportunidade para: %s", self.name or "<sem nome>")
 
-        phone_cleaned = self._clean_phone(self.phone)
-        if not phone_cleaned:
-            _logger.warning("Telefone limpo está vazio para: %s", self.name or "<sem nome>")
+        phone_normalized = self._normalize_phone(self.phone)
+        if not phone_normalized:
+            _logger.warning("Telefone normalizado está vazio para: %s", self.name or "<sem nome>")
             raise ValidationError(_("O campo Telefone não pode estar vazio."))
 
-        # checar duplicidade
+        # checar duplicidade com telefone já padronizado
         existing = self.env['crm.lead'].search([
             ('type', '=', 'opportunity'),
             ('active', '=', True),
-            ('phone', 'ilike', phone_cleaned)
+            ('phone', '=', phone_normalized)
         ], limit=1)
         if existing:
             resp = existing.user_id.name or _('não atribuído')
@@ -43,10 +49,11 @@ class QuickCreateOpportunityWizard(models.TransientModel):
         try:
             partner_vals = {
                 'name': self.name,
-                'phone': self.phone,
+                'phone': phone_normalized,
                 'is_company': False,
                 'type': 'contact',
                 'company_id': self.env.company.id,
+                'company_type': 'person',
             }
             partner = self.env['res.partner'].sudo().create(partner_vals)
             _logger.info("Contato criado com ID %s", partner.id)
@@ -58,7 +65,7 @@ class QuickCreateOpportunityWizard(models.TransientModel):
         try:
             lead_vals = {
                 'name': self.name,
-                'phone': self.phone,
+                'phone': phone_normalized,
                 'partner_id': partner.id,
                 'type': 'opportunity',
                 'user_id': self.env.uid,

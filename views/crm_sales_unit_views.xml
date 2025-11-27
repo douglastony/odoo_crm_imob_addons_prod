@@ -42,6 +42,21 @@
         </field>
     </record>
 
+    <!-- Search View: adicionando filtro Data de Modificação -->
+    <record id="view_crm_lead_search_modification" model="ir.ui.view">
+        <field name="name">crm.lead.search.modification</field>
+        <field name="model">crm.lead</field>
+        <field name="inherit_id" ref="crm.view_crm_case_opportunities_filter"/>
+        <field name="arch" type="xml">
+            <xpath expr="//search" position="inside">
+                <!-- Filtro dinâmico padrão -->
+                <filter string="Data de Modificação"
+                        name="date_last_stage_update"
+                        date="date_last_stage_update"/>
+            </xpath>
+        </field>
+    </record>
+
     <!-- Action -->
     <record id="action_crm_sales_unit" model="ir.actions.act_window">
         <field name="name">Unidades de Vendas</field>

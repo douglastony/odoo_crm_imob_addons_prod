@@ -13,3 +13,13 @@ access_crm_lead_manager,crm.lead.manager,crm.model_crm_lead,crm_sales_unit.group
 access_crm_lead_director,crm.lead.director,crm.model_crm_lead,crm_sales_unit.group_director,1,1,1,0
 access_crm_lead_president,crm.lead.president,crm.model_crm_lead,crm_sales_unit.group_president,1,1,1,1
 access_crm_opportunity_quick_create_wizard,access_crm_opportunity_quick_create_wizard,model_crm_opportunity_quick_create_wizard,,1,1,1,1
+access_location_president,access_location_president,model_crm_sales_unit_location,crm_sales_unit.group_president,1,1,1,1
+access_crm_sales_unit_location,access.crm.sales.unit.location,model_crm_sales_unit_location,base.group_user,1,1,1,1
+access_crm_sales_unit_ip,access.crm.sales_unit.ip,model_crm_sales_unit_ip,base.group_user,1,1,1,1
+access_hr_attendance_user,access_hr_attendance_user,hr_attendance.model_hr_attendance,base.group_user,1,0,0,0
+access_hr_attendance_manager,access_hr_attendance_manager,hr_attendance.model_hr_attendance,crm_sales_unit.group_manager,1,1,1,1
+access_crm_sales_unit_queue_user,crm.sales.unit.queue,model_crm_sales_unit_queue,base.group_user,1,1,1,1
+access_crm_sales_unit_config_user,crm.sales.unit.config.user,model_crm_sales_unit_config,base.group_user,1,0,0,0
+access_crm_sales_unit_config_manager,crm.sales.unit.config.manager,model_crm_sales_unit_config,crm_sales_unit.group_manager,1,1,1,0
+access_crm_sales_unit_config_director,crm.sales.unit.config.director,model_crm_sales_unit_config,crm_sales_unit.group_director,1,1,1,0
+access_crm_sales_unit_config_president,crm.sales.unit.config.president,model_crm_sales_unit_config,crm_sales_unit.group_president,1,1,1,1
