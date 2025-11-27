@@ -33,7 +33,7 @@ Módulo customizado para implementar hierarquia de unidades de vendas
     'assets': {
         'web.assets_backend': [
             'crm_sales_unit/static/src/js/attendance_systray_geo_patch.js',
-            'crm_sales_unit/static/src/js/date_filter_extension.js',
+            #'crm_sales_unit/static/src/xml/attendance_geo_systray.xml',
         ],
     },
     'post_init_hook': 'post_init_hook',

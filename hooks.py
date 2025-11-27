@@ -27,3 +27,42 @@ def post_init_hook(cr, registry):
                 'view_id': custom_view.id,
                 'act_window_id': action.id,
             })
+
+
+    # --- Criação dos filtros dinâmicos ---
+    today = date.today()
+    yesterday = today - timedelta(days=1)
+    start_week = today - timedelta(days=today.weekday())
+    start_last_week = start_week - timedelta(days=7)
+
+    filters = [
+        {
+            'name': 'Hoje',
+            'domain': [('date_last_stage_update', '=', today)],
+        },
+        {
+            'name': 'Ontem',
+            'domain': [('date_last_stage_update', '=', yesterday)],
+        },
+        {
+            'name': 'Semana Corrente',
+            'domain': [('date_last_stage_update', '>=', start_week)],
+        },
+        {
+            'name': 'Semana Passada',
+            'domain': [
+                ('date_last_stage_update', '>=', start_last_week),
+                ('date_last_stage_update', '<', start_week),
+            ],
+        },
+    ]
+
+    for f in filters:
+        # Evita duplicar se já existir
+        if not env['ir.filters'].search([('name', '=', f['name']), ('model_id', '=', 'crm.lead')], limit=1):
+            env['ir.filters'].create({
+                'name': f['name'],
+                'model_id': 'crm.lead',
+                'domain': f['domain'],
+                'user_id': False,
+            })

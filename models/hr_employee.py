@@ -31,11 +31,19 @@ class HREmployee(models.Model):
     # ======================================================
     # AÇÕES DE CHECK-IN/OUT
     # ======================================================
+    
+    def _attendance_action_change(self, geo_ip_response=None):
+        """Sobrescreve o método privado, aceitando o parâmetro que o core envia."""
+        ctx = self._validate_checkin_conditions()  # bloqueia fora do raio/IP
+        res = super()._attendance_action_change(geo_ip_response)
+        self._write_attendance_extras(res, ctx)
+        return res
+    
     def attendance_action_change(self):
         ctx = self._validate_checkin_conditions()
         res = super().attendance_action_change()
         self._write_attendance_extras(res, ctx)
-
+        _logger.warning("Entrou em attendance_action_change para %s", self.name)
         config = self.env['crm.sales.unit.config'].get_config()
         if not config:
             return res

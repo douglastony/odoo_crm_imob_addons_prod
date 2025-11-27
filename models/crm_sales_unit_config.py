@@ -117,47 +117,88 @@ class HREmployee(models.Model):
 
     # (mantém os métodos de validação e auditoria como já estavam)
     def _validate_checkin_conditions(self):
-        """Valida apenas IP e localização. 
-        Não bloqueia por horário, pois isso é tratado na fila.
+        """Valida IP e localização.
+        - Se houver locais configurados: exige latitude/longitude e valida se está dentro do raio.
+        - Se não houver locais: não bloqueia por localização.
+        - Se houver ranges de IP: valida IP.
         """
         ctx = {}
+
         # IP do cliente
         client_ip = self._get_client_ip()
         ctx['client_ip'] = client_ip
 
-        # Só valida IP se houver registros configurados
         ip_recs = self.env['crm.sales.unit.ip'].search([])
-        if client_ip and ip_recs:
-            # procura se o IP do cliente está dentro de algum range configurado
+        if ip_recs:  # só valida se houver ranges configurados
+            if not client_ip:
+                _logger.warning("Check-in NEGADO: IP do cliente não identificado.")
+                raise ValidationError(_("Check-in negado. Não foi possível identificar seu IP."))
+            try:
+                ip_obj = ipaddress.ip_address(client_ip)
+            except ValueError:
+                _logger.warning("Check-in NEGADO: IP inválido detectado (%s).", client_ip)
+                raise ValidationError(_("IP inválido detectado (%s).") % client_ip)
             matched = False
             for ip_rec in ip_recs:
-                try:
-                    net = ipaddress.ip_network(ip_rec.cidr, strict=False)
-                    if ipaddress.ip_address(client_ip) in net:
-                        ctx['validated_ip_rec'] = ip_rec
-                        matched = True
-                        break
-                except ValueError:
-                    continue
+                if ip_obj in ipaddress.ip_network(ip_rec.cidr, strict=False):
+                    ctx['validated_ip_rec'] = ip_rec
+                    matched = True
+                    _logger.info("IP VALIDADO: %s dentro do range %s", client_ip, ip_rec.cidr)
+                    break
             if not matched:
-                raise ValidationError(_("IP não autorizado para check-in: %s") % client_ip)
+                _logger.warning("Check-in NEGADO: IP %s fora de todos os ranges permitidos.", client_ip)
+                raise ValidationError(_("Check-in negado. Seu IP (%s) não está em nenhum range permitido.") % client_ip)
 
-        # Localização (se disponível no contexto)
-        lat = self.env.context.get('latitude')
-        lon = self.env.context.get('longitude')
-        ctx['latitude'] = lat
-        ctx['longitude'] = lon
+        # Localização
+        raw_lat = self.env.context.get('latitude') or getattr(request, 'params', {}).get('latitude')
+        raw_lon = self.env.context.get('longitude') or getattr(request, 'params', {}).get('longitude')
 
-        if lat and lon:
-            loc = self.env['crm.sales.unit.location'].search([], limit=1)
-            if loc:
-                dist = self._calculate_distance(lat, lon, loc.latitude, loc.longitude)
+        locs = self.env['crm.sales.unit.location'].search([])
+        validated_location = False
+        latitude = None
+        longitude = None
+
+        _logger.warning("Validando check-in: lat=%s lon=%s ip=%s", raw_lat, raw_lon, client_ip)
+
+        if locs:  # só valida se houver locais configurados
+            if raw_lat is None or raw_lon is None:
+                _logger.warning("Check-in NEGADO: coordenadas não informadas.")
+                raise ValidationError(_("Check-in negado. Coordenadas de localização não foram informadas."))
+            try:
+                latitude = float(str(raw_lat).replace(',', '.'))
+                longitude = float(str(raw_lon).replace(',', '.'))
+            except Exception:
+                _logger.warning("Check-in NEGADO: coordenadas inválidas. lat=%s lon=%s", raw_lat, raw_lon)
+                raise ValidationError(_("Coordenadas inválidas para check-in/out."))
+
+            # Avalia cada localização e loga a distância
+            for loc in locs:
+                dist = self._calculate_distance(latitude, longitude, loc.latitude, loc.longitude)
+                _logger.info("Distância até %s: %.2f m (raio %.2f)", loc.name, dist, loc.radius)
                 if dist <= loc.radius:
+                    validated_location = loc
                     ctx['validated_location'] = loc
-                else:
-                    raise ValidationError(_("Fora da área permitida para check-in (distância %.2fm)") % dist)
+                    _logger.info("Check-in VALIDADO por localização: %s (%.2f m dentro do raio %.2f)",
+                                loc.name, dist, loc.radius)
+                    break
 
+            if not validated_location:
+                nearest = min(
+                    locs,
+                    key=lambda loc: self._calculate_distance(latitude, longitude, loc.latitude, loc.longitude)
+                )
+                nearest_dist = self._calculate_distance(latitude, longitude, nearest.latitude, nearest.longitude)
+                _logger.warning("Check-in NEGADO: mais próximo '%s' (%.2f m, raio %.2f)",
+                                nearest.name, nearest_dist, nearest.radius)
+                raise ValidationError(_(
+                    "Check-in negado. Você está a %.2f metros do local '%s'. "
+                    "Distância máxima permitida: %.2f metros."
+                ) % (nearest_dist, nearest.name, nearest.radius))
+
+        ctx['latitude'] = latitude
+        ctx['longitude'] = longitude
         return ctx
+
 
 # ---------------------------------------------------------
 # Configuração única de expediente
