@@ -6,3 +6,4 @@ from . import calendar_event
 from . import quick_create_opportunity_wizard
 from . import crm_sales_unit_config
 from . import hr_employee
+from . import crm_lead_stage_history

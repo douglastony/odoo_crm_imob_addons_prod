@@ -1,0 +1,55 @@
+<odoo>
+  <data>
+
+    <!-- Histórico dos estágios -->
+    <record id="view_crm_lead_stage_history_list" model="ir.ui.view">
+      <field name="name">crm.lead.stage.history.list</field>
+      <field name="model">crm.lead.stage.history</field>
+      <field name="arch" type="xml">
+        <list string="Histórico de Etapas">
+          <field name="lead_id"/>
+          <field name="stage_id"/>
+          <field name="user_id"/>
+          <field name="date_stage_change"/>
+        </list>
+      </field>
+    </record>
+
+    <record id="view_crm_lead_stage_history_search" model="ir.ui.view">
+      <field name="name">crm.lead.stage.history.search</field>
+      <field name="model">crm.lead.stage.history</field>
+      <field name="arch" type="xml">
+        <search string="Filtro de Histórico">
+          <field name="date_stage_change"/>
+          <group expand="0" string="Corretor">
+            <field name="user_id"/>
+          </group>
+          <group expand="0" string="Etapa">
+            <field name="stage_id"/>
+          </group>
+        </search>
+      </field>
+    </record>
+
+    <record id="view_crm_lead_stage_history_pivot" model="ir.ui.view">
+      <field name="name">crm.lead.stage.history.pivot</field>
+      <field name="model">crm.lead.stage.history</field>
+      <field name="arch" type="xml">
+        <pivot string="Funil de Vendas">
+          <field name="stage_id" type="row"/>
+          <field name="user_id" type="col"/>
+          <field name="lead_id" type="measure" string="Leads" operator="count_distinct"/>
+          <field name="date_stage_change" type="filter"/>
+        </pivot>
+      </field>
+    </record>
+
+    <record id="action_crm_lead_stage_history" model="ir.actions.act_window">
+      <field name="name">Funil de Vendas</field>
+      <field name="res_model">crm.lead.stage.history</field>
+      <field name="view_mode">pivot,list</field>
+      <field name="search_view_id" ref="view_crm_lead_stage_history_search"/>
+    </record>
+
+  </data>
+</odoo>

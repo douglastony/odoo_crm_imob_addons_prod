@@ -19,14 +19,26 @@ class HREmployee(models.Model):
         store=False
     )
 
+
     @api.depends("user_id")
     def _compute_visibility(self):
-        """Define se o funcionário pode ser visto pelo usuário atual"""
         for emp in self:
-            if emp.user_id and emp.user_id in self.env.user.allowed_user_ids:
-                emp.can_be_seen = True
-            else:
-                emp.can_be_seen = False
+            emp.can_be_seen = emp.user_id in self.env.user.allowed_user_ids
+
+
+    def get_visible_attendances(self):
+        allowed_users = self.env.user.allowed_user_ids | self.env.user
+        allowed_employees = self.search([('user_id', 'in', allowed_users.ids)])
+        return self.env['hr.attendance'].search([('employee_id', 'in', allowed_employees.ids)])
+    
+    def get_visible_queue(self):
+        allowed_users = self.env.user.allowed_user_ids | self.env.user
+        return self.env['crm.sales.unit.queue'].search([
+            ('user_id', 'in', allowed_users.ids),
+            ('active', '=', True)
+        ])
+
+
 
     # ======================================================
     # AÇÕES DE CHECK-IN/OUT

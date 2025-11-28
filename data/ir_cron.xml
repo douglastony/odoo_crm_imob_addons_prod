@@ -9,8 +9,7 @@
             <field name="code">model.force_end_of_day_checkout()</field>
             <field name="interval_number">1</field>
             <field name="interval_type">minutes</field>
-            <!-- horário inicial de execução -->
-            <field name="nextcall">2025-11-24 17:20:00</field>
+            <field name="active">True</field>
         </record>
 
         <!-- Cron para resetar expediente -->
@@ -22,7 +21,7 @@
             <!-- Executa todo dia às 03:00 UTC (00:00 BRT) -->
             <field name="interval_number">1</field>
             <field name="interval_type">days</field>
-            <field name="nextcall">2025-11-27 03:00:00</field>
+            <field name="active">True</field>
         </record>
 
         <!-- Cron para popular fila no início do dia -->
@@ -33,7 +32,7 @@
             <field name="code">model.populate_queue_start_of_day()</field>
             <field name="interval_number">1</field>
             <field name="interval_type">minutes</field>
-            <field name="nextcall">2025-11-26 10:00:00</field>
+            <field name="active">True</field>
         </record>
 
         <!-- #Despopula fila dos corretores que fizerem checkout -->
@@ -44,7 +43,7 @@
             <field name="code">model.cleanup_queue_after_checkout()</field>
             <field name="interval_number">1</field>
             <field name="interval_type">minutes</field>
-            <field name="nextcall">2025-11-26 10:00:00</field>
+            <field name="active">True</field>
         </record>
 
     </data>

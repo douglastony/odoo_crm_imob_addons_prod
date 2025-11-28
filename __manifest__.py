@@ -14,14 +14,14 @@ Módulo customizado para implementar hierarquia de unidades de vendas
     'author': 'Ai.Facilita',
     'website': 'https://aifacilita.com.br',
     'license': 'LGPL-3',
-    'depends': ['crm', 'base', 'calendar', 'hr_attendance'],
+    'depends': ['crm', 'base', 'calendar', 'hr_attendance', 'web'],
     'data': [
         'security/sales_unit_groups.xml',
-        'data/ir_cron.xml',
         'security/ir.model.access.csv',
         'security/crm_lead_rules.xml',
         'security/calendar_event_rules.xml',
         'security/crm_sales_unit_attendance_rules.xml',  # atualizado para hr.attendance
+        'data/ir_cron.xml',
         'views/quick_create_opportunity_wizard_views.xml',
         'views/quick_create_opportunity_wizard_action.xml',
         'views/crm_lead_kanban_custom.xml',
@@ -29,13 +29,9 @@ Módulo customizado para implementar hierarquia de unidades de vendas
         'views/res_users_views.xml',
         'views/crm_sales_unit_config_views.xml',
         'views/crm_sales_unit_attendance_views.xml',  # aponta para hr.attendance
+        'views/crm_lead_stage_history_views.xml',  # view pivot
+        'views/crm_lead_BI_menus.xml',  # menus
     ],
-    'assets': {
-        'web.assets_backend': [
-            'crm_sales_unit/static/src/js/attendance_systray_geo_patch.js',
-            #'crm_sales_unit/static/src/xml/attendance_geo_systray.xml',
-        ],
-    },
     'post_init_hook': 'post_init_hook',
     'demo': [],
     'installable': True,

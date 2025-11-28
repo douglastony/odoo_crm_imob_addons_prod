@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<templates xml:space="preserve">
-  <t t-name="crm_sales_unit.AttendanceGeoSystray">
-    <div class="o_systray_item" t-on-click="onClick" title="Presença com Geolocalização">
-      <i class="fa fa-map-marker"></i>
-    </div>
-  </t>
-</templates>

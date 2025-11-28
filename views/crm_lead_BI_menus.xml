@@ -1,0 +1,20 @@
+<odoo>
+  <data>
+
+    <!-- Menu pai: Funil de Vendas -->
+    <menuitem id="menu_funnel_root"
+              name="Funil de Vendas"
+              parent="crm.crm_menu_root"
+              sequence="50"
+              groups="base.group_system"/>
+
+    <!-- Submenu: Dados -->
+    <menuitem id="menu_funnel_dados"
+              name="Dados"
+              parent="menu_funnel_root"
+              action="action_crm_lead_stage_history"
+              sequence="10"
+              groups="base.group_system"/>
+
+  </data>
+</odoo>

@@ -240,6 +240,29 @@ class ResUsers(models.Model):
                     user.login,
                     user.sales_unit_id.display_name if user.sales_unit_id else "Nenhuma"
                 )
+        
+        res = super().write(vals)
+
+        # 🔄 Atualiza vínculo com unidade
+        if "sales_unit_id" in vals:
+            for user in self:
+                old_units = self.env["crm.sales.unit"].search([("member_ids", "in", user.id)])
+                for unit in old_units:
+                    if unit != user.sales_unit_id:
+                        unit.write({'member_ids': [(3, user.id)]})
+                if user.sales_unit_id and user not in user.sales_unit_id.member_ids:
+                    user.sales_unit_id.write({'member_ids': [(4, user.id)]})
+                _logger.info(
+                    "Usuário [%s] movido para Unidade [%s]",
+                    user.login,
+                    user.sales_unit_id.display_name if user.sales_unit_id else "Nenhuma"
+                )
+
+        self._check_unique_sales_unit_role()
+
+        # ✅ Força recompute da visibilidade para todos os usuários
+        self.env['res.users'].search([])._compute_allowed_user_ids()
+        _logger.info("Campo allowed_user_ids recalculado automaticamente após movimentação.")
 
         self._check_unique_sales_unit_role()
         return res
