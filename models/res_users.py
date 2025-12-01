@@ -39,12 +39,12 @@ class ResUsers(models.Model):
         "sales_unit_id.responsible_id",
         "groups_id"
     )
+    @api.depends("sales_unit_id", "groups_id")
     def _compute_allowed_user_ids(self):
         for user in self:
             allowed_users = self.env["res.users"]
             allowed_users |= user  # sempre inclui o próprio
 
-            # Presidente vê todos
             if user.has_group("crm_sales_unit.group_president"):
                 allowed_users = self.env["res.users"].search([])
             else:
@@ -60,6 +60,7 @@ class ResUsers(models.Model):
                     allowed_users |= descendant_units.mapped("responsible_id")
 
             user.allowed_user_ids = allowed_users
+
 
     # ======================================================
     # CRIAÇÃO DE USUÁRIO COM PADRONIZAÇÃO E TOKEN
@@ -125,7 +126,7 @@ class ResUsers(models.Model):
             vals["company_id"] = self.env.company.id
             vals["company_ids"] = [(6, 0, [self.env.company.id])]
 
-            # Cria usuário com sudo
+            # Cria usuário com sudo (ignora hierarquia do Administrator)
             user = super(ResUsers, self.sudo()).create([vals])
             user._check_unique_sales_unit_role()
 
@@ -148,37 +149,45 @@ class ResUsers(models.Model):
                 creator.login, user.login, user.sales_unit_id.display_name
             )
 
+        # ✅ Recompute seguro (ignora hierarquia, inclusive Administrator id=2)
+        self.env['res.users'].sudo().search([])._compute_allowed_user_ids()
+
         return users
+
 
     # ======================================================
     # UPDATE DE USUÁRIO COM HIERARQUIA E SEGURANÇA
     # ======================================================
     def write(self, vals):
         """Controla atualização de usuários com base na hierarquia"""
+        # Bypass para persistência de campo computado (recompute automático do Odoo)
+        # Se o write está apenas gravando allowed_user_ids, não validar hierarquia.
+        if set(vals.keys()) == {"allowed_user_ids"}:
+            return super().write(vals)
+
+        # ✅ Superusuário sempre pode
         if self.env.user.id == SUPERUSER_ID:
             return super().write(vals)
 
         # ✅ Permite redefinição de senha via convite (sem autenticação)
         invite_fields = {'password', 'signup_token', 'signup_type', 'signup_expiration'}
         if set(vals.keys()).issubset(invite_fields):
-            return super(ResUsers, self.sudo()).write(vals)
+            return super().write(vals)
 
         # ✅ Permite autoatualização segura (usuário autenticado editando a si mesmo)
         if all(user.id == self.env.user.id for user in self) and len(self) == 1:
-            return super().write(vals)
-
-        # ✅ Permite superusuário
-        if self.env.user.id == SUPERUSER_ID:
             return super().write(vals)
 
         mover = self.env.user
         mover_unit = mover.sales_unit_id
 
         # 🔒 Verifica se é um líder autorizado
-        if not mover.has_group("crm_sales_unit.group_president") \
-        and not mover.has_group("crm_sales_unit.group_director") \
-        and not mover.has_group("crm_sales_unit.group_manager") \
-        and not mover.has_group("crm_sales_unit.group_coordinator"):
+        if not (
+            mover.has_group("crm_sales_unit.group_president")
+            or mover.has_group("crm_sales_unit.group_director")
+            or mover.has_group("crm_sales_unit.group_manager")
+            or mover.has_group("crm_sales_unit.group_coordinator")
+        ):
             raise AccessError(_("Você não tem permissão para editar usuários."))
 
         # 🧭 Determina as unidades sob gestão
@@ -193,14 +202,19 @@ class ResUsers(models.Model):
         else:
             allowed_units = self.env["crm.sales.unit"]
 
-        # 🔍 Valida se os usuários estão sob a hierarquia
-        for user in self:
-            if not user.sales_unit_id or user.sales_unit_id not in allowed_units:
-                raise AccessError(_(
-                    "Você não pode alterar o usuário '%s', pois ele não está sob sua hierarquia."
-                ) % user.name)
+        # 🔍 Filtra recordset: ignora Administrator e usuários fora da hierarquia
+        users_to_check = self.filtered(
+            lambda u: u.id != SUPERUSER_ID and u.sales_unit_id and u.sales_unit_id in allowed_units
+        )
 
-        # 🔐 Força grupos seguros (em qualquer update)
+        # Se a operação não é apenas persistência de campo computado, bloquear fora da hierarquia
+        invalid_users = (self - users_to_check).filtered(lambda u: u.id != SUPERUSER_ID)
+        if invalid_users:
+            raise AccessError(_(
+                "Você não pode alterar os usuários fora da sua hierarquia: %s"
+            ) % ", ".join(invalid_users.mapped("name")))
+
+        # 🔐 Força grupos seguros (em qualquer update do campo groups_id)
         safe_group_ids = [
             self.env.ref('base.group_user').id,
             self.env.ref('sales_team.group_sale_salesman').id,
@@ -211,7 +225,6 @@ class ResUsers(models.Model):
             self.env.ref('base.group_no_one').id,
         ]
         if "groups_id" in vals:
-            # Se estiver tentando alterar os grupos, sobrescreve com os seguros
             vals["groups_id"] = [(6, 0, safe_group_ids)]
 
         # 🧩 Valida movimentação de unidade
@@ -223,29 +236,12 @@ class ResUsers(models.Model):
                     "Você não pode mover usuários para a unidade '%s', pois ela está fora da sua hierarquia."
                 ) % target_unit.display_name)
 
-        # 💾 Aplica alterações seguras
-        res = super().write(vals)
+        # 💾 Aplica alterações seguras apenas nos usuários válidos
+        res = super(ResUsers, users_to_check).write(vals)
 
         # 🔄 Atualiza vínculo com unidade
         if "sales_unit_id" in vals:
-            for user in self:
-                old_units = self.env["crm.sales.unit"].search([("member_ids", "in", user.id)])
-                for unit in old_units:
-                    if unit != user.sales_unit_id:
-                        unit.write({'member_ids': [(3, user.id)]})
-                if user.sales_unit_id and user not in user.sales_unit_id.member_ids:
-                    user.sales_unit_id.write({'member_ids': [(4, user.id)]})
-                _logger.info(
-                    "Usuário [%s] movido para Unidade [%s]",
-                    user.login,
-                    user.sales_unit_id.display_name if user.sales_unit_id else "Nenhuma"
-                )
-        
-        res = super().write(vals)
-
-        # 🔄 Atualiza vínculo com unidade
-        if "sales_unit_id" in vals:
-            for user in self:
+            for user in users_to_check:
                 old_units = self.env["crm.sales.unit"].search([("member_ids", "in", user.id)])
                 for unit in old_units:
                     if unit != user.sales_unit_id:
@@ -258,13 +254,35 @@ class ResUsers(models.Model):
                     user.sales_unit_id.display_name if user.sales_unit_id else "Nenhuma"
                 )
 
-        self._check_unique_sales_unit_role()
+        # 🔎 Verifica cargos exclusivos
+        users_to_check._check_unique_sales_unit_role()
 
-        # ✅ Força recompute da visibilidade para todos os usuários
-        self.env['res.users'].search([])._compute_allowed_user_ids()
-        _logger.info("Campo allowed_user_ids recalculado automaticamente após movimentação.")
+        # ✅ Recompute da visibilidade para todos os envolvidos na hierarquia do mover
+        affected_users = users_to_check | mover
 
-        self._check_unique_sales_unit_role()
+        # Inclui todos os gestores e membros sob as unidades que o gestor controla
+        affected_units = allowed_units
+        affected_users |= affected_units.mapped("responsible_id")
+        affected_users |= affected_units.mapped("member_ids")
+
+        # 🔄 Se houve movimentação de unidade, também recalcular gestores acima do novo destino
+        if "sales_unit_id" in vals:
+            target_unit = self.env["crm.sales.unit"].browse(vals["sales_unit_id"])
+            while target_unit:
+                if target_unit.responsible_id:
+                    affected_users |= target_unit.responsible_id
+                target_unit = target_unit.parent_id
+                # Para não subir além do gestor que moveu
+                if target_unit and target_unit.responsible_id == mover:
+                    break
+
+        # Força recompute com bypass de hierarquia
+        affected_users.with_context(skip_hierarchy_check=True)._compute_allowed_user_ids()
+
+        _logger.info(
+            "Campo allowed_user_ids recalculado para %s usuários (afetados + gestores envolvidos na movimentação feita por %s).",
+            len(affected_users), mover.name
+)
         return res
 
     # ======================================================

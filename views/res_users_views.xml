@@ -13,6 +13,13 @@
                 <field name="sales_unit_id" options="{'no_create': False}"/>
             </group>
         </xpath>
+
+        <!-- adiciona campo ativo na aba de preferências -->
+        <xpath expr="//page[@name='preferences']" position="inside">
+            <group string="Status">
+                <field name="active"/>
+            </group>
+        </xpath>
         </field>
     </record>
 
