@@ -84,7 +84,7 @@
                   name="Configurações de Unidade"
                   parent="crm.crm_menu_root"
                   sequence="100"
-                  groups="crm_sales_unit.group_manager,crm_sales_unit.group_director,crm_sales_unit.group_president"/>
+                  groups="crm_sales_unit.group_president"/>
 
         <menuitem id="menu_crm_sales_unit_location"
                   name="Localizações"

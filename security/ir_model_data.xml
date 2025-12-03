@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+  <data noupdate="1">
+    <record id="model_crm_lead_stage_history" model="ir.model">
+      <field name="name">crm.lead.stage.history</field>
+      <field name="model">crm.lead.stage.history</field>
+    </record>
+  </data>
+</odoo>

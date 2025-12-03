@@ -6,7 +6,7 @@
               name="Funil de Vendas"
               parent="crm.crm_menu_root"
               sequence="50"
-              groups="base.group_system"/>
+              groups="crm_sales_unit.group_coordinator,crm_sales_unit.group_manager,crm_sales_unit.group_director,crm_sales_unit.group_president"/>
 
     <!-- Submenu: Dados -->
     <menuitem id="menu_funnel_dados"
@@ -14,7 +14,7 @@
               parent="menu_funnel_root"
               action="action_crm_lead_stage_history"
               sequence="10"
-              groups="base.group_system"/>
+              groups="crm_sales_unit.group_coordinator,crm_sales_unit.group_manager,crm_sales_unit.group_director,crm_sales_unit.group_president"/>
 
   </data>
 </odoo>

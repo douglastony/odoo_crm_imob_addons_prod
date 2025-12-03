@@ -20,6 +20,7 @@ Módulo customizado para implementar hierarquia de unidades de vendas
         'security/ir.model.access.csv',
         'security/crm_lead_rules.xml',
         'security/calendar_event_rules.xml',
+        'security/crm_lead_stage_history_security.xml',
         'security/crm_sales_unit_attendance_rules.xml',  # atualizado para hr.attendance
         'data/ir_cron.xml',
         'views/quick_create_opportunity_wizard_views.xml',
