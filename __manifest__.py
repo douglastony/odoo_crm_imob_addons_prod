@@ -32,6 +32,7 @@ Módulo customizado para implementar hierarquia de unidades de vendas
         'views/crm_sales_unit_attendance_views.xml',  # aponta para hr.attendance
         'views/crm_lead_stage_history_views.xml',  # view pivot
         'views/crm_lead_BI_menus.xml',  # menus
+        'views/redistribute_menu_view.xml',  # menus
     ],
     'post_init_hook': 'post_init_hook',
     'demo': [],

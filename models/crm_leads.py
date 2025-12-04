@@ -103,5 +103,10 @@ class CrmLead(models.Model):
 
                 else:
                     _create_history(lead.stage_id, lead.user_id)
+        #garante a visibilidade do contato tbm
+        if "user_id" in vals:
+            for lead in self:
+                if lead.partner_id and lead.user_id:
+                    lead.partner_id.user_id = lead.user_id
 
         return res

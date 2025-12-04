@@ -24,3 +24,13 @@ access_crm_sales_unit_config_manager,crm.sales.unit.config.manager,model_crm_sal
 access_crm_sales_unit_config_director,crm.sales.unit.config.director,model_crm_sales_unit_config,crm_sales_unit.group_director,1,1,1,0
 access_crm_sales_unit_config_president,crm.sales.unit.config.president,model_crm_sales_unit_config,crm_sales_unit.group_president,1,1,1,1
 access_crm_lead_stage_history_user,crm.lead.stage.history user,model_crm_lead_stage_history,base.group_user,1,1,1,1
+access_res_partner_coordinator,res.partner.coordinator,base.model_res_partner,crm_sales_unit.group_coordinator,1,0,0,0
+access_res_partner_manager,res.partner.manager,base.model_res_partner,crm_sales_unit.group_manager,1,0,0,0
+access_res_partner_director,res.partner.director,base.model_res_partner,crm_sales_unit.group_director,1,0,0,0
+access_res_partner_president,res.partner.president,base.model_res_partner,crm_sales_unit.group_president,1,0,0,0
+access_res_partner_internal_user,res.partner.internal.user,base.model_res_partner,base.group_user,1,0,0,0
+access_redistribute_lead_wizard_coordinator,redistribute.lead.wizard.coordinator,model_redistribute_lead_wizard,crm_sales_unit.group_coordinator,1,1,1,1
+access_redistribute_lead_wizard_manager,redistribute.lead.wizard.manager,model_redistribute_lead_wizard,crm_sales_unit.group_manager,1,1,1,1
+access_redistribute_lead_wizard_director,redistribute.lead.wizard.director,model_redistribute_lead_wizard,crm_sales_unit.group_director,1,1,1,1
+access_redistribute_lead_wizard_president,redistribute.lead.wizard.president,model_redistribute_lead_wizard,crm_sales_unit.group_president,1,1,1,1
+
