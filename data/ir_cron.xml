@@ -1,14 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data noupdate="1">
+
         <!-- Cron para aplicar regras de expediente na fila -->
         <record id="cron_end_of_day_checkout" model="ir.cron">
             <field name="name">Fim do Expediente - Checkout</field>
             <field name="model_id" ref="hr.model_hr_employee"/>
             <field name="state">code</field>
             <field name="code">model.force_end_of_day_checkout()</field>
-            <field name="interval_number">11</field>
-            <field name="interval_type">minutes</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="nextcall">2025-12-05 00:00:00</field> <!-- amanhã às 00:00 UTC -->
             <field name="active">True</field>
         </record>
 
@@ -18,9 +20,9 @@
             <field name="model_id" ref="model_crm_sales_unit_config"/>
             <field name="state">code</field>
             <field name="code">model.reset_to_defaults()</field>
-            <!-- Executa todo dia às 03:00 UTC (00:00 BRT) -->
             <field name="interval_number">1</field>
             <field name="interval_type">days</field>
+            <field name="nextcall">2025-12-05 14:00:00</field> <!-- amanhã às 14:00 UTC -->
             <field name="active">True</field>
         </record>
 
@@ -35,13 +37,13 @@
             <field name="active">True</field>
         </record>
 
-        <!-- #Despopula fila dos corretores que fizerem checkout -->
+        <!-- Despopula fila dos corretores que fizerem checkout -->
         <record id="cron_cleanup_queue_after_checkout" model="ir.cron">
             <field name="name">Remover da Fila após Checkout</field>
             <field name="model_id" ref="hr.model_hr_employee"/>
             <field name="state">code</field>
             <field name="code">model.cleanup_queue_after_checkout()</field>
-            <field name="interval_number">17</field>
+            <field name="interval_number">15</field>
             <field name="interval_type">minutes</field>
             <field name="active">True</field>
         </record>

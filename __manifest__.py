@@ -33,7 +33,13 @@ Módulo customizado para implementar hierarquia de unidades de vendas
         'views/crm_lead_stage_history_views.xml',  # view pivot
         'views/crm_lead_BI_menus.xml',  # menus
         'views/redistribute_menu_view.xml',  # menus
+        'views/redistribute_log_view.xml',  # menus
     ],
+    'assets': {
+        'web.assets_backend': [
+            'crm_sales_unit/static/src/js/confirm_delay.js',
+        ],
+    },
     'post_init_hook': 'post_init_hook',
     'demo': [],
     'installable': True,

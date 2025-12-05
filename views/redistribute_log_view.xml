@@ -1,0 +1,84 @@
+<odoo>
+  <data>
+
+    <!-- list view dos logs -->
+    <record id="crm_sales_unit.view_redistribution_log_list" model="ir.ui.view">
+      <field name="name">crm.lead.redistribution.log.list</field>
+      <field name="model">crm.lead.redistribution.log</field>
+      <field name="arch" type="xml">
+        <list string="Logs de Redistribuição" create="false" delete="false" edit="false">
+          <field name="lead_id"/>
+          <field name="old_user_id"/>
+          <field name="new_user_id"/>
+          <field name="old_stage_id"/>
+          <field name="new_stage_id"/>
+          <field name="done_date"/>
+          <field name="executor_id"/>
+          <field name="undone"/>
+          <button name="action_undo" string="Desfazer" type="object" class="btn-secondary"/>
+        </list>
+      </field>
+    </record>
+    
+    <!-- search view dos logs -->
+    <record id="crm_sales_unit.view_redistribution_log_search" model="ir.ui.view">
+      <field name="name">crm.lead.redistribution.log.search</field>
+      <field name="model">crm.lead.redistribution.log</field>
+      <field name="arch" type="xml">
+        <search string="Pesquisar Logs de Redistribuição">
+            <!-- Campos de pesquisa livre -->
+            <field name="lead_id"/>
+
+            <!-- Agrupamentos -->
+            <group expand="0" string="Corretor Origem">
+                <field name="old_user_id"/>
+            </group>
+            <group expand="0" string="Corretor Destino">
+                <field name="new_user_id"/>
+            </group>
+            <group expand="0" string="Executor">
+                <field name="executor_id"/>
+            </group>
+        </search>
+      </field>
+    </record>
+
+
+    <!-- form view dos logs -->
+    <record id="crm_sales_unit.view_redistribution_log_form" model="ir.ui.view">
+      <field name="name">crm.lead.redistribution.log.form</field>
+      <field name="model">crm.lead.redistribution.log</field>
+      <field name="arch" type="xml">
+        <form string="Log de Redistribuição" create="false" edit="false" delete="false">
+          <group>
+            <field name="lead_id"/>
+            <field name="old_user_id"/>
+            <field name="new_user_id"/>
+            <field name="old_stage_id"/>
+            <field name="new_stage_id"/>
+            <field name="done_date"/>
+            <field name="executor_id"/>
+            <field name="undone"/>
+          </group>
+        </form>
+      </field>
+    </record>
+
+    <!-- Action para abrir os logs -->
+    <record id="crm_sales_unit.action_redistribution_log" model="ir.actions.act_window">
+      <field name="name">Logs de Redistribuição</field>
+      <field name="res_model">crm.lead.redistribution.log</field>
+      <field name="view_mode">list,form</field>
+      <field name="view_id" ref="crm_sales_unit.view_redistribution_log_list"/>
+      <field name="search_view_id" ref="crm_sales_unit.view_redistribution_log_search"/>
+    </record>
+
+    <!-- Menu -->
+    <menuitem id="crm_sales_unit.menu_redistribution_log"
+              name="Logs de Redistribuição"
+              parent="crm_sales_unit.menu_funnel_root"
+              action="crm_sales_unit.action_redistribution_log"
+              sequence="40"
+              groups="crm_sales_unit.group_manager,crm_sales_unit.group_director,crm_sales_unit.group_president"/>
+  </data>
+</odoo>

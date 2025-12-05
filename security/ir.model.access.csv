@@ -29,8 +29,9 @@ access_res_partner_manager,res.partner.manager,base.model_res_partner,crm_sales_
 access_res_partner_director,res.partner.director,base.model_res_partner,crm_sales_unit.group_director,1,0,0,0
 access_res_partner_president,res.partner.president,base.model_res_partner,crm_sales_unit.group_president,1,0,0,0
 access_res_partner_internal_user,res.partner.internal.user,base.model_res_partner,base.group_user,1,0,0,0
-access_redistribute_lead_wizard_coordinator,redistribute.lead.wizard.coordinator,model_redistribute_lead_wizard,crm_sales_unit.group_coordinator,1,1,1,1
 access_redistribute_lead_wizard_manager,redistribute.lead.wizard.manager,model_redistribute_lead_wizard,crm_sales_unit.group_manager,1,1,1,1
 access_redistribute_lead_wizard_director,redistribute.lead.wizard.director,model_redistribute_lead_wizard,crm_sales_unit.group_director,1,1,1,1
 access_redistribute_lead_wizard_president,redistribute.lead.wizard.president,model_redistribute_lead_wizard,crm_sales_unit.group_president,1,1,1,1
-
+access_lead_redistribution_log_manager,crm.lead.redistribution.log.manager,model_crm_lead_redistribution_log,crm_sales_unit.group_manager,1,1,1,0
+access_lead_redistribution_log_director,crm.lead.redistribution.log.director,model_crm_lead_redistribution_log,crm_sales_unit.group_director,1,1,1,1
+access_lead_redistribution_log_president,crm.lead.redistribution.log.president,model_crm_lead_redistribution_log,crm_sales_unit.group_president,1,1,1,1

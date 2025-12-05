@@ -1,0 +1,16 @@
+<odoo>
+    <data>
+        <record id="crm_sales_unit.redistribution_log_rule" model="ir.rule">
+            <field name="name">Visibilidade por Hierarquia - Redistribuição</field>
+            <field name="model_id" ref="model_crm_lead_redistribution_log"/>
+            <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+            <field name="domain_force">
+                [
+                    '|',
+                    ('create_uid', '=', user.id),
+                    ('create_uid', 'in', user.allowed_user_ids.ids)
+                ]
+            </field>
+        </record>
+    </data>
+</odoo>
