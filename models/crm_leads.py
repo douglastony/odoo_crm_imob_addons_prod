@@ -1,4 +1,4 @@
-from odoo import models, fields
+from odoo import models, fields, api
 
 STAGES_ORDER = [
     "Novo",
@@ -26,6 +26,20 @@ class CrmLead(models.Model):
         store=True,
         index=True
     )
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        leads = super(CrmLead, self).create(vals_list)
+        for lead in leads:
+            if lead.stage_id:
+                self.env["crm.lead.stage.history"].create({
+                    "lead_id": lead.id,
+                    "stage_id": lead.stage_id.id,
+                    "user_id": lead.user_id.id,
+                    "date_stage_change": fields.Datetime.now(),
+                    "lead_creation_date": lead.create_date,
+                })
+        return leads
 
     def write(self, vals):
         old_stages = {lead.id: lead.stage_id.name for lead in self}
